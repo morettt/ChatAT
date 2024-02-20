@@ -22,7 +22,7 @@ from transformers import AutoTokenizer, AutoModel
 
 from utils import process_response, generate_chatglm3, generate_stream_chatglm3
 
-MODEL_PATH = os.environ.get('MODEL_PATH', '/root/autodl-tmp/chatglm3-6b')
+MODEL_PATH = os.environ.get('MODEL_PATH', '大模型路径')
 TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
