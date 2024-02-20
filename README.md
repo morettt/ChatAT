@@ -4,6 +4,7 @@
 首先构建虚拟环境：
 
 conda create -n chatAT python=3.10 -y       创建新环境
+
 source activate chatAT               激活环境
 
 安装依赖：
