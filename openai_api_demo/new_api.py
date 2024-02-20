@@ -1,7 +1,7 @@
 import requests
 import json
 
-base_url = "http://127.0.0.1:6006"  # 本地部署的地址
+base_url = "http://127.0.0.1:8501"  # 本地部署的地址
 
 def create_chat_completion(model, messages, use_stream=False):
     data = {
