@@ -1,4 +1,4 @@
 #!/bin/bash
-cd /ChatAT/finetune_demo
+cd finetune_demo
 source activate chatAT
-python train_and_infer.py data/ /root/autodl-tmp/chatglm3-6b configs/lora.yaml
+python train_and_infer.py data/ ../LLM-model/chatglm3-6b configs/lora.yaml
