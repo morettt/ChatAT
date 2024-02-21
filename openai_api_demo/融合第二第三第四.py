@@ -94,10 +94,10 @@ def select_and_save_random_samples(input_file_path, output_file_path, num_sample
 # 结合代码的主执行逻辑
 if __name__ == "__main__":
     chat_messages = [{"role": "system", "content": "从现在开始扮演一个可爱的萌妹和我对话"}]
-    file_path = "/root/ChatGLM3/openai_api_demo/xxx.txt"
-    base_data_path = "/root/ChatGLM3/openai_api_demo/qqq.json"
-    train_output_file_path = "/root/ChatGLM3/finetune_demo/data/train.json"
-    dev_output_file_path = "/root/ChatGLM3/finetune_demo/data/dev.json"
+    file_path = "xxx.txt"
+    base_data_path = "qqq.json"
+    train_output_file_path = "../finetune_demo/data/train.json"
+    dev_output_file_path = "../finetune_demo/data/dev.json"
 
     with open(file_path, "w", encoding="utf-8") as file:
         while True:
