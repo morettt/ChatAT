@@ -10,7 +10,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 from typing import List, Literal, Optional, Union
-
+ 
 import torch
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -22,7 +22,7 @@ from transformers import AutoTokenizer, AutoModel
 
 from utils import process_response, generate_chatglm3, generate_stream_chatglm3
 
-MODEL_PATH = os.environ.get('MODEL_PATH', '大模型路径')
+MODEL_PATH = os.environ.get('MODEL_PATH', '../LLM-model/chatglm3-6b')
 TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
