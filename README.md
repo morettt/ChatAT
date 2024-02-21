@@ -13,14 +13,24 @@ cd ChatAT
 pip install -r requirements.txt
 
 
+下载安装lfs（帮助下载大文件）
+apt-get update
+apt-get install git-lfs
+git init
+git lfs install
+
+cd LLM-model
+git clone https://huggingface.co/THUDM/chatglm3-6b
+
+
 在第一个终端中输入以下命令：
 
-bash /root/ChatAT/one.sh
+bash /ChatAT/one.sh
 
 在第二个终端中输入以下命令开始和模型对话：
 
-bash /root/ChatAT/two.sh
+bash /ChatAT/two.sh
 
 最后训练模型，并一键对话：
 
-bash /root/ChatAT/插入结束.sh
+bash /ChatAT/插入结束.sh
