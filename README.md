@@ -1,7 +1,7 @@
 # ChatAT
-
+``` 
 首先克隆代码：
-
+``` 
 git clone https://github.com/morettt/ChatAT
 
 安装依赖：
