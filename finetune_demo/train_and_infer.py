@@ -25,6 +25,6 @@ if __name__ == "__main__":
     
     # 你需要根据`finetune_hf.py`的实际行为来确定checkpoint的保存路径
     # 这里假设它保存在某个基于训练配置命名的默认路径下
-    checkpoint_dir = "/output/checkpoint-2500/"
+    checkpoint_dir = "output/checkpoint-2500/"
     
     train_and_infer(data_dir, model_dir, config_file, checkpoint_dir)
