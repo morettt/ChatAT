@@ -8,6 +8,11 @@ git clone https://github.com/morettt/ChatAT
 ``` 
 cd ChatAT
 pip install -r requirements.txt
+```
+搭建虚拟环境
+``` 
+conda create -n ChatAT python=3.10 -y
+source activate ChatAT
 ``` 
 
 下载安装lfs（帮助下载大文件）
