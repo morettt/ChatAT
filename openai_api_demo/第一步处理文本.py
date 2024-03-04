@@ -31,8 +31,8 @@ def process_text(input_file_path, output_file_path, sentences_per_paragraph=50):
 
 
 # 定义文件路径
-input_file_path = '/root/ATAI Workshop/openai_api_demo/受刑文本.txt'
-output_file_path = '/root/ATAI Workshop/openai_api_demo/重生文本.txt'
+input_file_path = '/root/ChatAT/openai_api_demo/受刑文本.txt'
+output_file_path = '/root/ChatAT/openai_api_demo/重生文本.txt'
 
 # 调用函数
 process_text(input_file_path, output_file_path)
