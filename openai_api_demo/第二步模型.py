@@ -44,7 +44,7 @@ def load_questions_from_file(file_path):
     return questions
 
 # 假设的文件路径，请替换为您的实际文件路径
-file_path = "/root/ATAI Workshop/openai_api_demo/重生文本.txt"
+file_path = "/root/ChatAT/openai_api_demo/重生文本.txt"
 # 输出文件的名称
 output_file = "内容回复.txt"
 
