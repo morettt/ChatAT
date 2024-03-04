@@ -38,9 +38,9 @@ def process_and_transform_file(input_path, intermediate_path, output_path):
         print("处理文件时发生错误：", e)
 
 # 指定原始文件路径、中间文件路径和输出文件路径
-input_path = "/root/ATAI Workshop/openai_api_demo/内容回复.txt"
-intermediate_path = "/root/ATAI Workshop/openai_api_demo/处理后的qa.txt"  # 此路径在代码逻辑中实际上未使用
-output_path = "/root/ATAI Workshop/openai_api_demo/train.json"
+input_path = "/root/ChatAT/openai_api_demo/内容回复.txt"
+intermediate_path = "/root/ChatAT/openai_api_demo/处理后的qa.txt"  # 此路径在代码逻辑中实际上未使用
+output_path = "/root/ChatAT/openai_api_demo/train.json"
 
 # 调用函数处理文件
 process_and_transform_file(input_path, intermediate_path, output_path)
