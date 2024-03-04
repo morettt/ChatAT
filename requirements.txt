@@ -17,7 +17,7 @@ latex2mathml>=3.77.0
 jupyter_client>=8.6.0
 
 # for openai demo
-openai>=1.10.0
+pip install openai==0.28
 zhipuai>=2.0.1
 
 pydantic>=2.6.0
