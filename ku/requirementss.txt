@@ -1,0 +1,9 @@
+transformers>=4.32.0,<4.38.0
+accelerate
+tiktoken
+einops
+transformers_stream_generator==0.0.4
+scipy
+uvicorn
+fastapi
+sse_starlette
