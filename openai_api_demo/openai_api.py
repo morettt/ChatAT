@@ -22,7 +22,7 @@ from transformers import AutoTokenizer, AutoModel
 
 from utils import process_response, generate_chatglm3, generate_stream_chatglm3
 
-MODEL_PATH = os.environ.get('MODEL_PATH', '../LLM-model/chatglm3-6b')
+MODEL_PATH = os.environ.get('MODEL_PATH', '/root/autodl-tmp/chatglm3-6b')
 TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -246,4 +246,4 @@ if __name__ == "__main__":
         model = AutoModel.from_pretrained(MODEL_PATH, trust_remote_code=True).to(DEVICE).eval()
     else:  # CPU, Intel GPU and other GPU can use Float16 Precision Only
         model = AutoModel.from_pretrained(MODEL_PATH, trust_remote_code=True).float().to(DEVICE).eval()
-    uvicorn.run(app, host='0.0.0.0', port=6006, workers=1)
+    uvicorn.run(app, host='0.0.0.0', port=8501, workers=1)
