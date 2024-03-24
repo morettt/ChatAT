@@ -8,14 +8,14 @@ max_output_length: 256
 training_args:
   # see `transformers.Seq2SeqTrainingArguments`
   output_dir: ./output
-  max_steps: 3000
+  max_steps: 50000
   # settings for data loading
   per_device_train_batch_size: 1
   dataloader_num_workers: 16
   remove_unused_columns: false
   # settings for saving checkpoints
   save_strategy: steps
-  save_steps: 500
+  save_steps: 1000
   # settings for logging
   log_level: info
   logging_strategy: steps
@@ -23,7 +23,7 @@ training_args:
   # settings for evaluation
   per_device_eval_batch_size: 16
   evaluation_strategy: steps
-  eval_steps: 500
+  eval_steps: 1000
   # settings for optimizer
   # adam_epsilon: 1e-6
   # uncomment the following line to detect nan or inf values
