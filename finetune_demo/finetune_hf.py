@@ -8,9 +8,12 @@ from pathlib import Path
 from typing import Annotated, Any, Optional, Union
 
 import jieba
+import json
+import math
 import numpy as np
 import ruamel.yaml as yaml
 import torch
+import time
 import typer
 from datasets import Dataset, DatasetDict, NamedSplit, Split, load_dataset
 from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
@@ -36,10 +39,176 @@ from transformers import DataCollatorForSeq2Seq as _DataCollatorForSeq2Seq
 
 from transformers import Seq2SeqTrainer as _Seq2SeqTrainer
 
+from transformers import TrainerCallback
+
 ModelType = Union[PreTrainedModel, PeftModelForCausalLM]
 TokenizerType = Union[PreTrainedTokenizer, PreTrainedTokenizerFast]
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
+
+
+class ExtendedSaveStepRecorderCallback(TrainerCallback):
+    def __init__(self, script_path: str, base_command: str, cli_demo_path: str):
+        super().__init__()
+        self.script_path = script_path
+        self.base_command = base_command
+        self.cli_demo_path = cli_demo_path
+        self.last_save_step = None
+
+    def on_save(self, args, state, control, **kwargs):
+        self.last_save_step = state.global_step
+
+    def on_train_end(self, args, state, control, **kwargs):
+        if self.last_save_step is not None:
+            # 更新测试.py文件
+            command = self.base_command.format(checkpoint=self.last_save_step)
+            with open(self.script_path, 'w', encoding='utf-8') as script_file:
+                script_file.write("import subprocess\n\n")
+                script_file.write(f'# 运行脚本\n')
+                script_file.write(f'subprocess.run({command})\n')
+            print(f"Updated {self.script_path} with checkpoint-{self.last_save_step}")
+            
+            # 生成新的cli_demo.py文件
+            model_path = f'/root/ChatAT/finetune_demo/output/checkpoint-{self.last_save_step}'
+            demo_file_contents = f"""import os
+import platform
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from typing import Union, Tuple
+from pathlib import Path
+
+def load_model_and_tokenizer(model_dir: Union[str, Path], trust_remote_code: bool = True) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
+    model_dir = Path(model_dir)  # 确保model_dir是Path对象
+    if (model_dir / 'adapter_config.json').exists():
+        from transformers import AutoModelForCausalLM as AutoPeftModelForCausalLM
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            model_dir, trust_remote_code=trust_remote_code, device_map='auto'
+        )
+        tokenizer_dir = model.peft_config['default'].base_model_name_or_path
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_dir, trust_remote_code=trust_remote_code, device_map='auto'
+        )
+        tokenizer_dir = model_dir
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_dir, trust_remote_code=trust_remote_code
+    )
+    return model, tokenizer
+
+MODEL_PATH = os.environ.get('MODEL_PATH', '""" + model_path + """')
+model, tokenizer = load_model_and_tokenizer(MODEL_PATH)
+
+os_name = platform.system()
+clear_command = 'cls' if os_name == 'Windows' else 'clear'
+stop_stream = False
+
+welcome_prompt = "欢迎使用 ChatGLM3-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序"
+
+def build_prompt(history):
+    prompt = welcome_prompt
+    for query, response in history:
+        prompt += f"\\n\\n用户：{query}"
+        prompt += f"\\n\\nChatGLM3-6B：{response}"
+    return prompt
+
+def main():
+    past_key_values, history = None, []
+    global stop_stream
+    print(welcome_prompt)
+    while True:
+        query = input("\\n用户：")
+        if query.strip() == "stop":
+            break
+        if query.strip() == "clear":
+            past_key_values, history = None, []
+            os.system(clear_command)
+            print(welcome_prompt)
+            continue
+        print("\\nChatGLM：", end="")
+        current_length = 0
+        for response, history, past_key_values in model.stream_chat(tokenizer, query, history=history, top_p=1,
+                                                                    temperature=0.01,
+                                                                    past_key_values=past_key_values,
+                                                                    return_past_key_values=True):
+            if stop_stream:
+                stop_stream = False
+                break
+            else:
+                print(response[current_length:], end="", flush=True)
+                current_length = len(response)
+        print("")
+
+if __name__ == "__main__":
+    main()
+"""
+            with open(self.cli_demo_path, 'w', encoding='utf-8') as demo_file:
+                demo_file.write(demo_file_contents)
+            print(f"Created or updated {self.cli_demo_path} with the latest checkpoint path.")
+
+
+def predict_epoch(sample_size):
+    if sample_size <= 100:
+        return 15
+    elif sample_size > 100 and sample_size <= 500:
+        return round(15 - (sample_size - 100) * (5 / 400))
+    elif sample_size > 500 and sample_size <= 1000:
+        return round(15 - (sample_size - 500) * (5 / 500))
+    elif sample_size > 1000 and sample_size <= 10000:
+        return round(10 - (sample_size - 1000) * (8 / 9000))
+    else:
+        return 2
+            
+            
+            
+            
+def load_dataset_and_predict_epoch(file_path):
+    try:
+        conversations_count = 0
+        with open(file_path, 'r') as file:
+            for line in file:
+                data = json.loads(line)
+                conversations_count += 1
+        sample_size_rounded = round(conversations_count, -1)
+        epoch = predict_epoch(sample_size_rounded)
+        print(f"原始数据集大小: {conversations_count}条, 四舍五入后: {sample_size_rounded}条, 推荐的Epoch数: {epoch}")
+        return epoch
+    except Exception as e:
+        print(f"加载文件或计算过程中发生错误: {e}")
+        return None
+    
+    
+file_path = "/root/ChatAT/finetune_demo/data/train.json"
+epoch_threshold = load_dataset_and_predict_epoch(file_path)
+            
+class EarlyStoppingCallback(TrainerCallback):
+    def __init__(self, loss_threshold=None, epoch_threshold=None, enable_monitoring=True):
+        super().__init__()
+        self.loss_threshold = loss_threshold
+        self.epoch_threshold = epoch_threshold
+        self.should_stop_after_next_eval = False
+        self.enable_monitoring = enable_monitoring
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        # 检查是否启用了基于损失的早停，并且logs中包含了损失信息
+        if self.enable_monitoring and logs is not None and 'loss' in logs and self.loss_threshold is not None:
+            if logs['loss'] < self.loss_threshold:
+                print(f"Loss {logs['loss']} is below threshold {self.loss_threshold}. Preparing to stop after next evaluation.")
+                self.should_stop_after_next_eval = True
+
+    def on_evaluate(self, args, state, control, **kwargs):
+        # 如果之前的检查触发了早停，设置相应的控制标志
+        if self.enable_monitoring and self.should_stop_after_next_eval:
+            print("Evaluation completed. Stopping training after next save.")
+            self.should_stop_after_next_eval = False
+            control.should_save = True
+            control.should_training_stop = True
+
+    def on_epoch_end(self, args, state, control, **kwargs):
+        # 检查是否启用了基于周期的早停
+        if self.enable_monitoring and self.epoch_threshold is not None and state.epoch >= self.epoch_threshold:
+            print(f"Reached epoch threshold of {self.epoch_threshold}. Preparing to stop training after next save.")
+            control.should_save = True
+            control.should_training_stop = True
+            
 
 class DataCollatorForSeq2Seq(_DataCollatorForSeq2Seq):
     def __call__(self, features, return_tensors=None):
@@ -143,17 +312,22 @@ class DataConfig(object):
         }
 
 
+import dataclasses as dc
+from typing import Optional
+# 假设 Seq2SeqTrainingArguments, DataConfig, PeftConfig 已经被正确导入
+
 @dc.dataclass
 class FinetuningConfig(object):
-    data_config: DataConfig
+    data_config: DataConfig  
 
     max_input_length: int
     max_output_length: int
 
+    # 使用 default_factory 来避免可变默认值的问题
     training_args: Seq2SeqTrainingArguments = dc.field(
-        default=Seq2SeqTrainingArguments(output_dir='./output')
+        default_factory=lambda: Seq2SeqTrainingArguments(output_dir='./output')
     )
-    peft_config: Optional[PeftConfig] = None
+    peft_config: Optional[PeftConfig] = None  # 假设这也是你代码中的一个类
 
     def __post_init__(self):
         if not self.training_args.do_eval or self.data_config.val_file is None:
@@ -162,9 +336,10 @@ class FinetuningConfig(object):
             self.training_args.evaluation_strategy = 'no'
             self.data_config.val_file = None
         else:
+            # 逻辑确保评估批处理大小与训练批处理大小一致，如果未指定
             self.training_args.per_device_eval_batch_size = (
-                    self.training_args.per_device_eval_batch_size
-                    or self.training_args.per_device_train_batch_size
+                self.training_args.per_device_eval_batch_size
+                or self.training_args.per_device_train_batch_size
             )
 
     @classmethod
@@ -435,23 +610,34 @@ def compute_metrics(eval_preds: EvalPrediction, tokenizer: PreTrainedTokenizer):
 
 @app.command()
 def main(
-        data_dir: Annotated[str, typer.Argument(help='')],
+        data_dir: Annotated[str, typer.Argument(help='The directory containing the dataset.')],
         model_dir: Annotated[
             str,
             typer.Argument(
                 help='A string that specifies the model id of a pretrained model configuration hosted on huggingface.co, or a path to a directory containing a model configuration file.'
             ),
         ],
-        config_file: Annotated[str, typer.Argument(help='')],
+        config_file: Annotated[str, typer.Argument(help='The path to the configuration file.')],
 ):
+    # 从配置文件加载微调配置
     ft_config = FinetuningConfig.from_file(config_file)
+    
+    # 加载模型和分词器
     tokenizer, model = load_tokenizer_and_model(
         model_dir,
         trust_remote_code=True,
         peft_config=ft_config.peft_config,
     )
+    
+    # 初始化数据管理器
     data_manager = DataManager(data_dir, ft_config.data_config)
+    
+    # 根据训练数据集大小计算 epoch 阈值
+    # 确保这里使用的是正确的数据集文件路径
+    train_data_path = Path(data_dir) / "/root/ChatAT/finetune_demo/data/train.json"  # 使用传入的 data_dir 参数
+    epoch_threshold = load_dataset_and_predict_epoch(str(train_data_path))
 
+    # 准备数据集
     train_dataset = data_manager.get_dataset(
         Split.TRAIN,
         functools.partial(
@@ -462,7 +648,7 @@ def main(
         ),
         batched=True,
     )
-    print('train_dataset:', train_dataset)
+
     val_dataset = data_manager.get_dataset(
         Split.VALIDATION,
         functools.partial(
@@ -473,8 +659,7 @@ def main(
         ),
         batched=True,
     )
-    if val_dataset is not None:
-        print('val_dataset:', val_dataset)
+
     test_dataset = data_manager.get_dataset(
         Split.TEST,
         functools.partial(
@@ -485,25 +670,14 @@ def main(
         ),
         batched=True,
     )
-    if test_dataset is not None:
-        print('test_dataset:', test_dataset)
 
-    # checks encoded dataset
-    # _sanity_check(
-    #     train_dataset[0]["input_ids"], train_dataset[0]["labels"], tokenizer
-    # )
-
-    # turn model to fp32
+    # Prepare the model for training (optional)
     _prepare_model_for_training(model)
 
-    ft_config.training_args.generation_config.pad_token_id = (
-        tokenizer.pad_token_id
-    )
-    ft_config.training_args.generation_config.eos_token_id = [
-        tokenizer.eos_token_id,
-        tokenizer.get_command('<|user|>'),
-        tokenizer.get_command('<|observation|>'),
-    ]
+    script_path = "/root/ChatAT/finetune_demo/测试.py"
+    base_command = '["python", "duolun.py", "output/checkpoint-{checkpoint}"]'
+
+    # 创建 Seq2SeqTrainer 实例
     trainer = Seq2SeqTrainer(
         model=model,
         args=ft_config.training_args,
@@ -512,17 +686,21 @@ def main(
             padding='longest',
             return_tensors='pt',
         ),
-        train_dataset=train_dataset,
-        eval_dataset=val_dataset.select(list(range(50))),
-        tokenizer=tokenizer,
+         train_dataset=train_dataset,
+        eval_dataset=val_dataset.select(list(range(50))) if val_dataset is not None else None,
         compute_metrics=functools.partial(compute_metrics, tokenizer=tokenizer),
+        #用loss早停就epoch_threshold=None ,用epoch早停就(loss_threshold=None
+        callbacks=[EarlyStoppingCallback(loss_threshold=None, epoch_threshold=epoch_threshold, enable_monitoring=True),
+               ExtendedSaveStepRecorderCallback(script_path, base_command, "/root/ChatAT/finetune_demo/cli_demo.py")]  # 注意这里的修改
     )
+    
+    
+    
     trainer.train()
 
-    # test stage
+    # Testing stage (optional)
     if test_dataset is not None:
         trainer.predict(test_dataset)
-
 
 if __name__ == '__main__':
     app()
