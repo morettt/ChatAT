@@ -1,5 +1,12 @@
 # ChatAT
 
+
+大家可以收藏一下，但不用部署，因为我还没有写好这个项目。私密马赛，我太懒了，你现在部署肯定是会报错的
+
+
+
+
+
 首先克隆代码：
 ``` 
 git clone https://github.com/morettt/ChatAT
