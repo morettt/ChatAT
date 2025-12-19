@@ -1,5 +1,11 @@
-# 忽略文件夹
-要忽略的
+# 第一步：忽略所有
+*
 
-# 忽略文件
-一键提交.bat
+# 第二步：不忽略 .gitignore 本身
+!.gitignore
+
+# 不忽略finetune_demo文件夹
+!finetune_demo
+
+# 第四步：但是 finetune_demo文件夹里的这些要忽略
+finetune_demo/models
