@@ -4,8 +4,9 @@
 # 第二步：不忽略 .gitignore 本身
 !.gitignore
 
-# 不忽略finetune_demo文件夹
-!finetune_demo
+# 第三步：不忽略 finetune_demo 文件夹
+!finetune_demo/
+!finetune_demo/**
 
-# 第四步：但是 finetune_demo文件夹里的这些要忽略
-finetune_demo/models
+# 第四步：但是 finetune_demo 文件夹里的这些要忽略
+finetune_demo/models/
